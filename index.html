@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mini Stu - Hct Photobooth</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Syne:wght@700;800&family=Pacifico&family=Bebas+Neue&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgMain: '#0B0A10',
+                        bgPanel: '#15141C',
+                        bgCard: '#1C1B26',
+                        brandStart: '#D972FF',
+                        brandEnd: '#FF72C4',
+                        brandHover: '#E58FFF',
+                        textMuted: '#9CA3AF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['Syne', 'sans-serif'],
+                        pacifico: ['Pacifico', 'cursive'],
+                        bebas: ['Bebas Neue', 'sans-serif'],
+                        playfair: ['Playfair Display', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Fabric.js v5 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <!-- QRious for QR Code -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+
+    <style>
+        body { background-color: #0B0A10; color: #ffffff; overflow-x: hidden; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        .custom-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
+
+        /* Range Slider */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; height: 4px; border-radius: 2px; outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 16px; width: 16px; border-radius: 50%; background: #D972FF;
+            cursor: pointer; margin-top: -6px; box-shadow: 0 0 10px rgba(217, 114, 255, 0.5); transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        /* Custom Toggle */
+        .toggle-checkbox:checked { right: 0; border-color: #D972FF; }
+        .toggle-checkbox:checked + .toggle-label { background: linear-gradient(to right, #D972FF, #FF72C4); }
+        
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        
+        @keyframes flashAnim { 0% { opacity: 1; } 100% { opacity: 0; } }
+        .flash-active { animation: flashAnim 0.8s ease-out; background: white; z-index: 50; }
+
+        /* Layout Cards */
+        .layout-card { transition: all 0.2s ease; border: 1px solid rgba(255,255,255,0.05); }
+        .layout-card:hover { border-color: rgba(217, 114, 255, 0.4); transform: translateY(-2px); box-shadow: 0 10px 30px -10px rgba(217, 114, 255, 0.15); }
+        .layout-card.selected { border-color: #D972FF; background: rgba(217, 114, 255, 0.05); }
+        
+        /* Buttons */
+        .btn-gradient { background: linear-gradient(135deg, #D972FF, #FF72C4); transition: opacity 0.2s, transform 0.1s; }
+        .btn-gradient:hover { opacity: 0.9; }
+        .btn-gradient:active { transform: scale(0.98); }
+        .btn-gradient:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .btn-dark { background: #1C1B26; border: 1px solid rgba(255,255,255,0.05); transition: background 0.2s, border-color 0.2s; }
+        .btn-dark:hover:not(:disabled) { background: #2A2938; }
+
+        .tool-btn.active, .filter-btn.active { border-color: #D972FF; color: #D972FF; background: rgba(217, 114, 255, 0.05); }
+
+        /* Selection Grid Items */
+        .select-item { transition: all 0.2s; cursor: pointer; border: 2px solid transparent; }
+        .select-item.selected { border-color: #D972FF; transform: scale(0.98); box-shadow: 0 0 20px rgba(217,114,255,0.3); }
+        .select-badge { transition: all 0.2s; transform: scale(0); opacity: 0; }
+        .select-item.selected .select-badge { transform: scale(1); opacity: 1; }
+
+        .progress-slot { transition: all 0.3s; }
+        .progress-slot.filled { background: linear-gradient(to right, #D972FF, #FF72C4); border-color: transparent; }
+    </style>
+</head>
+<body class="antialiased min-h-[100dvh] flex flex-col selection:bg-brandStart selection:text-white">
+
+    <!-- SCREEN 0: WELCOME -->
+    <div id="screen-welcome" class="flex-1 flex flex-col items-center justify-center p-6 animate-fade-in min-h-[100dvh] bg-[url('https://images.unsplash.com/photo-1517457373958-b7bdd4587205?q=80&w=2069&auto=format&fit=crop')] bg-cover bg-center relative">
+        <div class="absolute inset-0 bg-bgMain/80 backdrop-blur-sm z-0"></div>
+        <div class="z-10 flex flex-col items-center text-center">
+            <div class="w-24 h-24 bg-gradient-to-br from-brandStart to-brandEnd rounded-3xl flex items-center justify-center shadow-[0_0_40px_rgba(217,114,255,0.5)] mb-6 transform rotate-12">
+                <i class="fa-solid fa-camera-retro text-5xl text-white -rotate-12"></i>
+            </div>
+            <h1 class="text-5xl md:text-7xl font-display font-bold mb-4 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-300">Mini Stu - Hct</h1>
+            <p class="text-textMuted text-lg md:text-xl mb-10 max-w-md">Lưu giữ khoảnh khắc tuyệt vời của bạn với buồng chụp ảnh phong cách Hàn Quốc.</p>
+            
+            <button id="btn-start-app" class="btn-gradient text-white font-bold text-xl px-12 py-5 rounded-full shadow-[0_0_30px_rgba(217,114,255,0.5)] flex items-center gap-3 hover:-translate-y-2 transition-all">
+                BẮT ĐẦU CHỤP <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN 1: CHỌN LAYOUT -->
+    <div id="screen-layout" class="hidden flex-1 flex flex-col items-center justify-center p-6 min-h-[100dvh]">
+        <h1 class="text-4xl md:text-5xl font-display font-bold mb-3 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 text-center">Chọn kiểu khung hình</h1>
+        <p class="text-textMuted mb-12 font-medium">Bố cục nào phù hợp với bạn hôm nay? ✨</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full mb-12">
+            <!-- Dải đôi -->
+            <div class="layout-card bg-bgPanel rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer text-center relative" data-layout="2-strip">
+                <i class="fa-solid fa-film text-4xl text-gray-400 mb-4 opacity-70"></i>
+                <h3 class="text-xl font-bold mb-2">Dải đôi</h3>
+                <p class="text-sm text-textMuted">2 ảnh dọc cổ điển<br><span class="text-xs text-brandStart font-semibold">(Chụp 4, chọn 2)</span></p>
+            </div>
+            
+            <!-- Dải tứ (Vuông 1:1) -->
+            <div class="layout-card selected bg-bgPanel rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer text-center relative" data-layout="4-strip">
+                <div class="absolute -top-3 bg-brandStart text-white text-[10px] font-bold px-3 py-1 rounded-full tracking-wider">POPULAR</div>
+                <i class="fa-solid fa-border-all text-4xl text-brandStart mb-4"></i>
+                <h3 class="text-xl font-bold mb-2">Dải tứ (Vuông)</h3>
+                <p class="text-sm text-textMuted">Lưới 4 ảnh vuông 1:1<br><span class="text-xs text-brandStart font-semibold">(Chụp 6, chọn 4)</span></p>
+            </div>
+            
+            <!-- Lưới 2x2 (Gốc 4:3) -->
+            <div class="layout-card bg-bgPanel rounded-3xl p-8 flex flex-col items-center justify-center cursor-pointer text-center relative" data-layout="2x2-grid">
+                <i class="fa-solid fa-images text-4xl text-gray-400 mb-4 opacity-70"></i>
+                <h3 class="text-xl font-bold mb-2">Lưới 2x2 (Gốc)</h3>
+                <p class="text-sm text-textMuted">Lưới 4 ảnh tỷ lệ 4:3<br><span class="text-xs text-brandStart font-semibold">(Chụp 6, chọn 4)</span></p>
+            </div>
+        </div>
+        
+        <button id="btn-to-camera" class="btn-gradient text-white font-bold text-lg px-12 py-4 rounded-full shadow-[0_0_20px_rgba(217,114,255,0.4)] flex items-center gap-2 hover:-translate-y-1 transition-transform">
+            VÀO PHÒNG CHỤP <i class="fa-solid fa-arrow-right text-sm"></i>
+        </button>
+    </div>
+
+    <!-- SCREEN 2: CAMERA -->
+    <div id="screen-camera" class="hidden flex-1 flex flex-col items-center justify-center p-4 md:p-10 relative bg-bgMain min-h-[100dvh]">
+        <div class="absolute top-6 left-6 right-6 flex justify-between items-center z-20 max-w-5xl mx-auto">
+            <button id="btn-back-to-layout" class="btn-dark p-3 rounded-full w-12 h-12 flex items-center justify-center text-textMuted hover:text-white">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="text-center">
+                <div class="text-lg text-white font-display font-bold tracking-widest uppercase mb-1" id="camera-status-text">Mini Stu - Hct</div>
+                <div class="text-sm text-brandStart" id="camera-sub-status">Chuẩn bị pose đẹp nào! 😄</div>
+            </div>
+            <div class="w-12"></div>
+        </div>
+
+        <div class="relative w-full max-w-4xl aspect-[4/3] bg-black rounded-[2rem] overflow-hidden shadow-2xl mt-12 border border-white/10">
+            <video id="video" autoplay playsinline class="w-full h-full object-cover transform scale-x-[-1]"></video>
+            
+            <div id="flash-overlay" class="absolute inset-0 pointer-events-none opacity-0"></div>
+            <div id="countdown-overlay" class="absolute inset-0 flex items-center justify-center bg-black/40 hidden z-10">
+                <span id="countdown-text" class="text-9xl font-display font-bold text-white drop-shadow-[0_4px_20px_rgba(0,0,0,0.5)]">3</span>
+            </div>
+
+            <div id="camera-error" class="absolute inset-0 flex-col items-center justify-center bg-bgPanel z-10 hidden">
+                <i class="fa-solid fa-camera-slash text-5xl text-gray-600 mb-4"></i>
+                <p class="text-textMuted">Không thể truy cập Camera. Vui lòng cấp quyền.</p>
+            </div>
+        </div>
+
+        <div class="w-full max-w-4xl mt-8 flex flex-col items-center gap-6 z-20">
+            <div class="w-3/4 max-w-md h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div id="progress-bar-fill" class="h-full bg-gradient-to-r from-brandStart to-brandEnd w-0 transition-all duration-300"></div>
+            </div>
+            <div id="camera-progress-slots" class="flex gap-3"></div>
+            <button id="btn-start-capture" class="btn-gradient text-white font-bold text-lg px-16 py-4 rounded-full shadow-[0_0_20px_rgba(217,114,255,0.3)] tracking-wide hover:-translate-y-1 transition-transform">
+                BẮT ĐẦU CHỤP
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN 3: LỰA CHỌN ẢNH -->
+    <div id="screen-selection" class="hidden flex-1 flex flex-col items-center p-6 min-h-[100dvh] relative overflow-y-auto custom-scroll">
+        <div class="text-center mt-10 mb-8 max-w-2xl mx-auto">
+            <h2 class="text-3xl md:text-4xl font-display font-bold mb-2">Chọn ảnh ưng ý nhất</h2>
+            <p class="text-textMuted text-lg">Vui lòng chọn <span id="select-required-count" class="text-brandStart font-bold">4</span> bức ảnh cho layout của bạn.</p>
+        </div>
+        
+        <div id="selection-grid" class="grid gap-4 max-w-5xl w-full mb-24 mx-auto">
+            <!-- Images inserted here -->
+        </div>
+        
+        <div class="fixed bottom-0 left-0 right-0 bg-bgPanel/95 backdrop-blur-md border-t border-white/10 p-4 flex justify-center gap-4 z-50">
+            <button id="btn-retake" class="btn-dark text-white font-bold px-8 py-3 rounded-xl flex items-center gap-2 hover:-translate-y-1 transition-transform">
+                <i class="fa-solid fa-rotate-left"></i> Chụp lại
+            </button>
+            <button id="btn-to-studio" disabled class="btn-gradient text-white font-bold px-12 py-3 rounded-xl shadow-[0_0_20px_rgba(217,114,255,0.3)] flex items-center gap-2 hover:-translate-y-1 transition-transform disabled:hover:translate-y-0">
+                TIẾP TỤC <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- SCREEN 4: STUDIO TRANG TRÍ (FLEXBOX CHUẨN ĐỂ KHÔNG BỊ LỖI BỐ CỤC) -->
+    <div id="screen-studio" class="hidden flex-col lg:flex-row h-[100dvh] w-full bg-bgMain overflow-hidden">
+        
+        <!-- TRÁI: KHU VỰC CANVAS (Luôn co giãn và hiển thị vừa vặn) -->
+        <div class="flex-1 flex flex-col bg-[#0f0e15] h-[55dvh] lg:h-full relative border-b lg:border-b-0 lg:border-r border-white/10">
+            <div class="h-16 flex items-center px-4 lg:px-6 justify-between shrink-0 absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/60 to-transparent">
+                <button id="btn-back-to-selection" class="text-white/70 hover:text-white transition-colors flex items-center gap-2 text-sm font-medium bg-black/30 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                    <i class="fa-solid fa-arrow-left"></i> Quay lại
+                </button>
+                <div class="font-display font-bold text-lg tracking-wider text-white drop-shadow-md">Mini Stu - Hct</div>
+                <div class="w-20"></div>
+            </div>
+            
+            <!-- Wrapper bọc Canvas, sử dụng CSS Transform để fit ảnh -->
+            <div id="canvas-wrapper" class="flex-1 w-full h-full flex items-center justify-center overflow-hidden p-4 lg:p-6 mt-10 lg:mt-0 relative">
+                <div class="canvas-container shadow-[0_10px_40px_rgba(0,0,0,0.7)] origin-center transition-transform duration-200">
+                    <canvas id="fabric-canvas"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PHẢI: THANH CÔNG CỤ (Kích thước cố định trên Desktop, cuộn độc lập) -->
+        <div class="w-full lg:w-[400px] h-[45dvh] lg:h-full flex flex-col bg-bgPanel shrink-0 z-20">
+            
+            <!-- Handle kéo trên Mobile (Giao diện) -->
+            <div class="w-full flex justify-center py-3 lg:hidden shrink-0">
+                <div class="w-12 h-1.5 bg-white/20 rounded-full"></div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scroll p-5 space-y-8 pb-32">
+                
+                <!-- Màu nền -->
+                <div>
+                    <h4 class="text-[11px] font-bold text-textMuted uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-palette text-brandStart"></i> Màu nền
+                    </h4>
+                    <div class="flex flex-wrap gap-2 lg:gap-3">
+                        <button class="w-9 h-9 rounded-xl border-2 border-brandStart bg-white hover:scale-110 transition color-btn" data-color="#FFFFFF"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#0B0A10] hover:scale-110 transition color-btn" data-color="#0B0A10"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#1C1B26] hover:scale-110 transition color-btn" data-color="#1C1B26"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#fde047] hover:scale-110 transition color-btn" data-color="#fde047"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#f9a8d4] hover:scale-110 transition color-btn" data-color="#f9a8d4"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#a78bfa] hover:scale-110 transition color-btn" data-color="#a78bfa"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-[#99f6e4] hover:scale-110 transition color-btn" data-color="#99f6e4"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-gradient-to-br from-[#D972FF] to-[#FF72C4] hover:scale-110 transition color-btn" data-color="grad1"></button>
+                        <button class="w-9 h-9 rounded-xl border border-white/10 bg-gradient-to-br from-[#4facfe] to-[#00f2fe] hover:scale-110 transition color-btn" data-color="grad2"></button>
+                    </div>
+                </div>
+
+                <!-- Bộ lọc ảnh -->
+                <div>
+                    <h4 class="text-[11px] font-bold text-textMuted uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-brandStart"></i> Bộ lọc ảnh
+                    </h4>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <button class="filter-btn active btn-dark py-2 rounded-xl text-xs font-medium border-brandStart text-brandStart bg-brandStart/10" data-filter="none">🎨 Gốc</button>
+                        <button class="filter-btn btn-dark py-2 rounded-xl text-xs font-medium" data-filter="grayscale">⬛ T.Đen</button>
+                        <button class="filter-btn btn-dark py-2 rounded-xl text-xs font-medium" data-filter="vintage">🟫 Vintage</button>
+                        <button class="filter-btn btn-dark py-2 rounded-xl text-xs font-medium" data-filter="vibrant">🌈 Rực rỡ</button>
+                        <button class="filter-btn btn-dark py-2 rounded-xl text-xs font-medium" data-filter="polaroid">📷 Polaroid</button>
+                        <button class="filter-btn btn-dark py-2 rounded-xl text-xs font-medium" data-filter="brownie">☕ Brownie</button>
+                    </div>
+                    
+                    <div class="space-y-4 bg-bgMain p-4 rounded-2xl border border-white/5">
+                        <div>
+                            <div class="flex justify-between text-xs text-textMuted mb-2"><span>Độ sáng</span> <span id="val-bright">0%</span></div>
+                            <input type="range" id="slider-bright" min="-100" max="100" value="0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-textMuted mb-2"><span>Tương phản</span> <span id="val-contrast">0%</span></div>
+                            <input type="range" id="slider-contrast" min="-1" max="1" step="0.05" value="0">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-textMuted mb-2"><span>Độ bão hòa</span> <span id="val-sat">0%</span></div>
+                            <input type="range" id="slider-sat" min="-1" max="1" step="0.05" value="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nhãn dán Đồ sộ -->
+                <div>
+                    <h4 class="text-[11px] font-bold text-textMuted uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-face-smile text-brandStart"></i> Nhãn dán
+                    </h4>
+                    <div class="bg-bgMain p-3 rounded-2xl border border-white/5 h-48 overflow-y-auto custom-scroll relative">
+                        <div class="grid grid-cols-6 gap-3 items-center justify-items-center text-center pb-2" id="sticker-container">
+                            <!-- JS Inject Emojis here -->
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-textMuted mt-2 italic text-center">* Chạm/Click vào icon để gắn lên hình</p>
+                </div>
+
+                <!-- Công cụ (Vẽ, Chữ) -->
+                <div>
+                    <h4 class="text-[11px] font-bold text-textMuted uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-pen-ruler text-brandStart"></i> Công cụ trang trí
+                    </h4>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button id="btn-select" class="tool-btn active btn-dark py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2"><i class="fa-solid fa-arrow-pointer"></i> Chọn/Sửa</button>
+                        <button id="btn-draw" class="tool-btn btn-dark py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2"><i class="fa-solid fa-pen"></i> Vẽ tay</button>
+                        <button id="btn-text" class="btn-dark py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2"><i class="fa-solid fa-t"></i> Thêm chữ</button>
+                        <button id="btn-delete-obj" class="btn-dark py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 hover:border-red-500/30 flex items-center justify-center gap-2"><i class="fa-solid fa-trash-can"></i> Xóa item</button>
+                    </div>
+                    
+                    <!-- Vẽ Options -->
+                    <div id="draw-options" class="hidden bg-bgMain p-4 rounded-2xl border border-white/5 mb-2">
+                        <div class="flex items-center justify-between mb-3 text-sm text-textMuted">
+                            <span>Màu cọ</span>
+                            <input type="color" id="draw-color" value="#D972FF" class="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-textMuted mb-2"><span>Kích thước cọ</span> <span id="val-brush">6px</span></div>
+                            <input type="range" id="draw-width" min="1" max="30" value="6">
+                        </div>
+                    </div>
+                    
+                    <!-- Chữ Options -->
+                    <div id="font-options-panel" class="hidden bg-bgMain p-4 rounded-2xl border border-brandStart/30 mb-4 animate-fade-in mt-2">
+                        <h5 class="text-xs font-bold text-white mb-3">Tùy chỉnh Chữ</h5>
+                        <div class="grid grid-cols-3 gap-2 mb-3">
+                            <button class="font-btn btn-dark py-1.5 rounded-lg text-xs" style="font-family: 'Inter';" data-font="Inter">Inter</button>
+                            <button class="font-btn btn-dark py-1.5 rounded-lg text-xs border-brandStart text-brandStart" style="font-family: 'Syne';" data-font="Syne">Syne</button>
+                            <button class="font-btn btn-dark py-1.5 rounded-lg text-xs" style="font-family: 'Pacifico';" data-font="Pacifico">Pacifico</button>
+                            <button class="font-btn btn-dark py-1.5 rounded-lg text-xs" style="font-family: 'Bebas Neue';" data-font="Bebas Neue">Bebas</button>
+                            <button class="font-btn btn-dark py-1.5 rounded-lg text-xs" style="font-family: 'Playfair Display';" data-font="Playfair Display">Elegant</button>
+                        </div>
+                        <div class="flex items-center justify-between text-sm text-textMuted mb-3">
+                            <span>Màu chữ</span>
+                            <input type="color" id="text-color-picker" value="#000000" class="w-8 h-8 p-0 border-0 rounded cursor-pointer bg-transparent">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-textMuted mb-2"><span>Kích cỡ chữ</span> <span id="val-font-size">60px</span></div>
+                            <input type="range" id="font-size-slider" min="20" max="150" value="60">
+                        </div>
+                    </div>
+
+                    <button id="btn-clear-canvas" class="w-full btn-dark py-2.5 rounded-xl text-xs font-medium text-textMuted hover:text-white mt-2">
+                        XÓA HẾT TRANG TRÍ (GIỮ ẢNH)
+                    </button>
+                </div>
+
+                <!-- Lời nhắn & Mã QR -->
+                <div>
+                    <h4 class="text-[11px] font-bold text-textMuted uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-qrcode text-brandStart"></i> Lời nhắn & Mã QR
+                    </h4>
+                    
+                    <div class="bg-bgMain p-4 rounded-2xl border border-white/5 space-y-4">
+                        <div>
+                            <label class="block text-xs text-textMuted mb-2">Link mạng xã hội (tạo mã QR)</label>
+                            <input type="text" id="qr-link-input" placeholder="VD: https://instagram.com/..." class="w-full bg-[#1C1B26] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brandStart transition">
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-300">Tạo & Hiển thị mã QR</span>
+                            <div class="relative inline-block w-10 align-middle select-none">
+                                <input type="checkbox" id="toggle-qr" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-bgPanel appearance-none cursor-pointer z-10 transition-all duration-300"/>
+                                <label for="toggle-qr" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-300">Hiển thị ngày tháng</span>
+                            <div class="relative inline-block w-10 align-middle select-none">
+                                <input type="checkbox" id="toggle-date" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-bgPanel appearance-none cursor-pointer z-10 transition-all duration-300"/>
+                                <label for="toggle-date" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-300">Logo Mini Stu - Hct</span>
+                            <div class="relative inline-block w-10 align-middle select-none">
+                                <input type="checkbox" id="toggle-logo" checked class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-bgPanel appearance-none cursor-pointer z-10 transition-all duration-300"/>
+                                <label for="toggle-logo" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-600 cursor-pointer transition-colors duration-300"></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Nút Lưu -->
+            <div class="fixed lg:absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 shrink-0 bg-bgPanel/90 backdrop-blur z-30 lg:w-[400px]">
+                <button id="btn-export-png" class="w-full btn-gradient py-3.5 rounded-xl font-bold text-white shadow-[0_0_15px_rgba(217,114,255,0.2)] flex items-center justify-center gap-2 text-sm lg:text-base">
+                    <i class="fa-solid fa-download"></i> LƯU ẢNH (CHẤT LƯỢNG CAO)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Canvas cho việc lấy Video Frame -->
+    <canvas id="capture-canvas" class="hidden"></canvas>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Config & State ---
+            const APP_NAME = "Mini Stu - Hct";
+            let selectedLayout = '4-strip'; 
+            let totalToCapture = 6;
+            let totalToSelect = 4;
+            let capturedPhotos = []; 
+            let selectedPhotosOrder = []; 
+            
+            let stream = null;
+            let canvas = null; 
+            let fabricImages = []; 
+            let defaultElements = { title: null, date: null, qr: null };
+
+            // --- Audio ---
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            function playShutterSound() {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.1);
+            }
+
+            // --- DOM Elements ---
+            const els = {
+                scWelcome: document.getElementById('screen-welcome'),
+                scLayout: document.getElementById('screen-layout'),
+                scCamera: document.getElementById('screen-camera'),
+                scSelection: document.getElementById('screen-selection'),
+                scStudio: document.getElementById('screen-studio'),
+                video: document.getElementById('video'),
+                flash: document.getElementById('flash-overlay'),
+                countdown: document.getElementById('countdown-overlay'),
+                countText: document.getElementById('countdown-text'),
+                btnStartCap: document.getElementById('btn-start-capture'),
+                btnToStudio: document.getElementById('btn-to-studio'),
+                selGrid: document.getElementById('selection-grid'),
+                canvasWrap: document.getElementById('canvas-wrapper')
+            };
+
+            function showScreen(screen) {
+                [els.scWelcome, els.scLayout, els.scCamera, els.scSelection, els.scStudio].forEach(s => s.classList.add('hidden'));
+                screen.classList.remove('hidden');
+                if(screen !== els.scStudio) screen.classList.add('animate-fade-in');
+            }
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+
+            // --- 0. Welcome Screen ---
+            document.getElementById('btn-start-app').addEventListener('click', () => {
+                showScreen(els.scLayout);
+            });
+
+            // --- 1. Layout Selection ---
+            document.querySelectorAll('.layout-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    document.querySelectorAll('.layout-card').forEach(c => {
+                        c.classList.remove('selected', 'border-brandStart');
+                        c.querySelector('i').className = c.querySelector('i').className.replace('text-brandStart', 'text-gray-400 opacity-70');
+                    });
+                    card.classList.add('selected');
+                    card.querySelector('i').className = card.querySelector('i').className.replace('text-gray-400 opacity-70', 'text-brandStart');
+                    
+                    selectedLayout = card.dataset.layout;
+                    if(selectedLayout === '2-strip') { totalToCapture = 4; totalToSelect = 2; } 
+                    else { totalToCapture = 6; totalToSelect = 4; }
+                });
+            });
+
+            document.getElementById('btn-to-camera').addEventListener('click', () => { initCamera(); showScreen(els.scCamera); });
+
+            // --- 2. Camera Functions ---
+            async function initCamera() {
+                try {
+                    document.getElementById('camera-error').classList.add('hidden');
+                    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+                    els.video.srcObject = stream;
+                    capturedPhotos = [];
+                    els.btnStartCap.disabled = false;
+                    els.btnStartCap.classList.remove('opacity-50');
+                    document.getElementById('camera-status-text').innerText = "TẤM 0 / " + totalToCapture;
+                    document.getElementById('progress-bar-fill').style.width = "0%";
+                    
+                    const slots = document.getElementById('camera-progress-slots');
+                    slots.innerHTML = '';
+                    for(let i=0; i<totalToCapture; i++) {
+                        const s = document.createElement('div');
+                        s.className = "w-10 h-10 border border-white/20 rounded-lg progress-slot bg-bgCard/50 backdrop-blur-sm";
+                        slots.appendChild(s);
+                    }
+                } catch(e) {
+                    document.getElementById('camera-error').classList.remove('hidden');
+                    els.btnStartCap.disabled = true;
+                }
+            }
+
+            function stopCamera() { if(stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } }
+            document.getElementById('btn-back-to-layout').addEventListener('click', () => { stopCamera(); showScreen(els.scLayout); });
+
+            els.btnStartCap.addEventListener('click', async () => {
+                els.btnStartCap.disabled = true; els.btnStartCap.classList.add('opacity-50');
+                capturedPhotos = [];
+                for (let i = 1; i <= totalToCapture; i++) {
+                    document.getElementById('camera-status-text').innerText = `TẤM ${i} / ${totalToCapture}`;
+                    await runCountdown(3);
+                    playShutterSound();
+                    
+                    els.flash.classList.remove('flash-active'); void els.flash.offsetWidth; els.flash.classList.add('flash-active');
+                    
+                    grabFrame();
+                    document.querySelectorAll('.progress-slot')[i-1].classList.add('filled');
+                    document.getElementById('progress-bar-fill').style.width = `${(i/totalToCapture)*100}%`;
+                    if(i < totalToCapture) await wait(1000);
+                }
+                stopCamera();
+                document.getElementById('camera-status-text').innerText = "HOÀN TẤT!";
+                setTimeout(() => { renderSelection(); showScreen(els.scSelection); }, 800);
+            });
+
+            async function runCountdown(s) {
+                els.countdown.classList.remove('hidden');
+                for (let i = s; i > 0; i--) {
+                    els.countText.innerText = i;
+                    els.countText.style.transform = 'scale(1.5)'; els.countText.style.opacity = '0';
+                    void els.countText.offsetWidth; 
+                    els.countText.style.transition = 'all 0.3s';
+                    els.countText.style.transform = 'scale(1)'; els.countText.style.opacity = '1';
+                    await wait(1000);
+                }
+                els.countdown.classList.add('hidden');
+            }
+
+            function grabFrame() {
+                const c = document.getElementById('capture-canvas');
+                const ctx = c.getContext('2d');
+                c.width = 1440; c.height = 1080; 
+                ctx.translate(c.width, 0); ctx.scale(-1, 1);
+                
+                const vR = els.video.videoWidth / els.video.videoHeight;
+                const cR = c.width / c.height;
+                let sx = 0, sy = 0, sW = els.video.videoWidth, sH = els.video.videoHeight;
+                
+                if (vR > cR) { sW = sH * cR; sx = (els.video.videoWidth - sW) / 2; } 
+                else { sH = sW / cR; sy = (els.video.videoHeight - sH) / 2; }
+                
+                ctx.drawImage(els.video, sx, sy, sW, sH, 0, 0, c.width, c.height);
+                capturedPhotos.push(c.toDataURL('image/jpeg', 1.0)); 
+            }
+
+            // --- 3. Selection Screen ---
+            function renderSelection() {
+                document.getElementById('select-required-count').innerText = totalToSelect;
+                selectedPhotosOrder = [];
+                els.selGrid.innerHTML = '';
+                els.btnToStudio.disabled = true;
+                
+                els.selGrid.className = totalToCapture === 4 ? "grid grid-cols-2 gap-4 max-w-2xl w-full mb-24 mx-auto" : "grid grid-cols-2 md:grid-cols-3 gap-4 max-w-4xl w-full mb-24 mx-auto";
+
+                capturedPhotos.forEach((src, idx) => {
+                    const div = document.createElement('div');
+                    div.className = "select-item relative rounded-2xl overflow-hidden aspect-[4/3] bg-bgCard";
+                    div.innerHTML = `<img src="${src}" class="w-full h-full object-cover">
+                                     <div class="select-badge absolute top-3 left-3 bg-brandStart text-white w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-[0_4px_10px_rgba(0,0,0,0.5)] border-2 border-white"></div>`;
+                    div.addEventListener('click', () => {
+                        const pos = selectedPhotosOrder.indexOf(idx);
+                        if (pos > -1) { selectedPhotosOrder.splice(pos, 1); div.classList.remove('selected'); }
+                        else if (selectedPhotosOrder.length < totalToSelect) { selectedPhotosOrder.push(idx); div.classList.add('selected'); }
+                        
+                        document.querySelectorAll('.select-item').forEach(item => {
+                            const b = item.querySelector('.select-badge');
+                            const order = selectedPhotosOrder.indexOf(Array.from(els.selGrid.children).indexOf(item));
+                            if(order > -1) b.innerText = order + 1;
+                        });
+                        els.btnToStudio.disabled = selectedPhotosOrder.length !== totalToSelect;
+                    });
+                    els.selGrid.appendChild(div);
+                });
+            }
+
+            document.getElementById('btn-retake').addEventListener('click', () => { initCamera(); showScreen(els.scCamera); });
+            els.btnToStudio.addEventListener('click', () => { showScreen(els.scStudio); setTimeout(initFabricStudio, 100); });
+            document.getElementById('btn-back-to-selection').addEventListener('click', () => showScreen(els.scSelection));
+
+            // --- 4. Studio (Fabric.js) ---
+            let logicalW, logicalH;
+
+            function initFabricStudio() {
+                if (canvas) canvas.dispose();
+                fabricImages = [];
+
+                const photoW = 600; const photoH = 450; // 4:3
+                const squareSize = 500; // 1:1 cho chế độ 4-strip
+                const pad = 30; const btm = 200;
+
+                if (selectedLayout === '2-strip') {
+                    logicalW = photoW + (pad*2); logicalH = (photoH*2) + (pad*3) + btm;
+                } else if (selectedLayout === '4-strip') {
+                    logicalW = (squareSize*2) + (pad*3); logicalH = (squareSize*2) + (pad*3) + btm;
+                } else {
+                    logicalW = (photoW*2) + (pad*3); logicalH = (photoH*2) + (pad*3) + btm;
+                }
+
+                canvas = new fabric.Canvas('fabric-canvas', { width: logicalW, height: logicalH, backgroundColor: '#FFFFFF', preserveObjectStacking: true });
+                
+                scaleCanvasToFit();
+                window.addEventListener('resize', scaleCanvasToFit);
+
+                let loadPromises = selectedPhotosOrder.map((capIdx, ordIdx) => {
+                    return new Promise(res => {
+                        fabric.Image.fromURL(capturedPhotos[capIdx], img => {
+                            let l, t;
+                            if (selectedLayout === '2-strip') {
+                                l = pad; t = pad + (ordIdx * (photoH + pad));
+                                img.scaleToWidth(photoW); img.scaleToHeight(photoH, true);
+                            } else if (selectedLayout === '4-strip') {
+                                l = pad + ((ordIdx%2) * (squareSize + pad)); t = pad + (Math.floor(ordIdx/2) * (squareSize + pad));
+                                const min = Math.min(img.width, img.height);
+                                img.set({ cropX: (img.width-min)/2, cropY: (img.height-min)/2, width: min, height: min });
+                                img.scaleToWidth(squareSize); img.scaleToHeight(squareSize, true);
+                            } else {
+                                l = pad + ((ordIdx%2) * (photoW + pad)); t = pad + (Math.floor(ordIdx/2) * (photoH + pad));
+                                img.scaleToWidth(photoW); img.scaleToHeight(photoH, true);
+                            }
+                            img.set({ left: l, top: t, selectable: false, evented: false, rx: 12, ry: 12 });
+                            img.filters = []; canvas.add(img); fabricImages[ordIdx] = img;
+                            res();
+                        });
+                    });
+                });
+
+                Promise.all(loadPromises).then(() => {
+                    addDefaultElements(); canvas.renderAll();
+                });
+            }
+
+            function scaleCanvasToFit() {
+                if(!canvas) return;
+                const parent = els.canvasWrap;
+                const pW = parent.clientWidth - 48; // p-6 = 24px * 2
+                const pH = parent.clientHeight - 48;
+                
+                if(pW <= 0 || pH <= 0) return;
+
+                const scale = Math.min(pW / logicalW, pH / logicalH);
+                
+                const cContainer = document.querySelector('.canvas-container');
+                cContainer.style.transform = `scale(${scale})`;
+            }
+
+            function addDefaultElements() {
+                const tc = ['#0B0A10', '#1C1B26'].includes(canvas.backgroundColor) ? '#FFFFFF' : '#0B0A10';
+                defaultElements.title = new fabric.Textbox(APP_NAME.toUpperCase(), {
+                    left: logicalW/2, top: logicalH - 120, fontFamily: 'Syne', fontWeight: 800, fontSize: 56, fill: tc,
+                    originX: 'center', originY: 'center', selectable: true, textAlign: 'center', width: logicalW - 60
+                });
+                const d = new Date();
+                defaultElements.date = new fabric.Text(`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`, {
+                    left: logicalW/2, top: logicalH - 60, fontFamily: 'Inter', fontSize: 20, fill: tc, opacity: 0.6,
+                    originX: 'center', originY: 'center', selectable: true
+                });
+                canvas.add(defaultElements.title, defaultElements.date);
+            }
+
+            // --- Toolbar Logic ---
+            document.querySelectorAll('.color-btn').forEach(btn => {
+                btn.onclick = e => {
+                    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('border-brandStart', 'border-2'));
+                    e.target.classList.add('border-brandStart', 'border-2');
+                    let col = e.target.dataset.color;
+                    if(col.startsWith('grad')) {
+                        const stops = { 'grad1': ['#D972FF', '#FF72C4'], 'grad2': ['#4facfe', '#00f2fe'] };
+                        canvas.set('backgroundColor', new fabric.Gradient({ type: 'linear', coords: { x1: 0, y1: 0, x2: 0, y2: logicalH }, colorStops: [{offset: 0, color: stops[col][0]}, {offset: 1, color: stops[col][1]}] }));
+                        updateTextColor('#FFFFFF');
+                    } else {
+                        canvas.set('backgroundColor', col); updateTextColor(col);
+                    }
+                    canvas.renderAll();
+                };
+            });
+
+            function updateTextColor(bg) {
+                const tc = ['#0B0A10', '#1C1B26'].includes(bg) ? '#FFFFFF' : '#0B0A10';
+                if(defaultElements.title) defaultElements.title.set('fill', tc);
+                if(defaultElements.date) defaultElements.date.set('fill', tc);
+            }
+
+            function applyFilters() { fabricImages.forEach(img => { if(img) img.applyFilters(); }); canvas.renderAll(); }
+            
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.onclick = e => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10'));
+                    e.currentTarget.classList.add('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10');
+                    const t = e.currentTarget.dataset.filter;
+                    fabricImages.forEach(img => {
+                        if(!img) return;
+                        if(t === 'none') img.filters[0] = null;
+                        else if(t === 'grayscale') img.filters[0] = new fabric.Image.filters.Grayscale();
+                        else if(t === 'vintage') img.filters[0] = new fabric.Image.filters.Sepia();
+                        else if(t === 'vibrant') img.filters[0] = new fabric.Image.filters.Kodachrome();
+                        else if(t === 'polaroid') img.filters[0] = new fabric.Image.filters.Polaroid();
+                        else if(t === 'brownie') img.filters[0] = new fabric.Image.filters.Brownie();
+                    });
+                    applyFilters();
+                };
+            });
+
+            const sB = document.getElementById('slider-bright'), sC = document.getElementById('slider-contrast'), sS = document.getElementById('slider-sat');
+            function updAdj() {
+                document.getElementById('val-bright').innerText = sB.value + '%';
+                document.getElementById('val-contrast').innerText = Math.round(sC.value * 100) + '%';
+                document.getElementById('val-sat').innerText = Math.round(sS.value * 100) + '%';
+                fabricImages.forEach(img => {
+                    if(!img) return;
+                    img.filters[1] = new fabric.Image.filters.Brightness({ brightness: parseFloat(sB.value)/255 });
+                    img.filters[2] = new fabric.Image.filters.Contrast({ contrast: parseFloat(sC.value) });
+                    img.filters[3] = new fabric.Image.filters.Saturation({ saturation: parseFloat(sS.value) });
+                });
+                applyFilters();
+            }
+            [sB, sC, sS].forEach(s => s.oninput = updAdj);
+
+            // --- Deduplicated Stickers Generation ---
+            // Thuật toán dùng mảng có chứa các icon trùng, sau đó dùng Set() để lọc ra chỉ 1 bản sao duy nhất
+            const rawEmojisList = [
+                '🐸','🐹','🐻','🐷','🦄','🐲','🐔','🐽','🦍','🦊','🐳','🦎','🐉','🕊️','👁️','👀','🫀','🫁', // Requested explicitly
+                '👩‍❤️‍👨','💑','💍','💒','💌','💘','💕','🎀','🌸','🧸','🍓','🍰','🌷','✨','🦋','🤡','💀','👽','🥸','🌚','💅','🤌','🐶','❤️','👍','✌️','😂','😎','😍','📸','🔥',
+                '🐸', '🐻', '❤️', '🦋' // These are intentional duplicates to test the deduplication algorithm
+            ];
+            
+            // DEDUPLICATION logic
+            const uniqueEmojis = [...new Set(rawEmojisList)];
+            
+            const imgStickers = [
+                'image_26d83b.png', // Monkey looking away
+                'image_26d857.png', // Minion MUA
+                'image_26d876.png', // Angry Cat
+                'image_26d94c.png', // Scary Cat
+                'image_26dc37.jpg'  // Loading Cat
+            ];
+            
+            const stC = document.getElementById('sticker-container');
+            
+            uniqueEmojis.forEach(e => {
+                const d = document.createElement('div');
+                d.className = "cursor-pointer hover:scale-125 transition drop-shadow-md select-none text-2xl lg:text-3xl"; 
+                d.innerText = e;
+                d.onclick = () => {
+                    const t = new fabric.Text(e, { left: logicalW/2, top: logicalH/2, fontSize: 100, originX: 'center', originY: 'center', cornerColor: '#D972FF', borderColor: '#D972FF', cornerSize: 12, transparentCorners: false });
+                    canvas.add(t); canvas.setActiveObject(t);
+                };
+                stC.appendChild(d);
+            });
+
+            imgStickers.forEach(src => {
+                const imgEl = document.createElement('img');
+                imgEl.src = src;
+                imgEl.className = "cursor-pointer hover:scale-110 transition drop-shadow-md select-none w-10 h-10 object-cover rounded-lg border border-white/10";
+                imgEl.onclick = () => {
+                    fabric.Image.fromURL(src, img => {
+                        img.scaleToWidth(180);
+                        img.set({ left: logicalW/2, top: logicalH/2, originX: 'center', originY: 'center', cornerColor: '#D972FF', borderColor: '#D972FF', cornerSize: 12, transparentCorners: false });
+                        canvas.add(img); canvas.setActiveObject(img); canvas.renderAll();
+                    });
+                };
+                stC.appendChild(imgEl);
+            });
+
+            // --- Decor tools (Draw, Text) ---
+            const bSel = document.getElementById('btn-select'), bDraw = document.getElementById('btn-draw'), dOpt = document.getElementById('draw-options'), fOpt = document.getElementById('font-options-panel');
+            function rstTool() {
+                bSel.classList.remove('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10');
+                bDraw.classList.remove('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10');
+                dOpt.classList.add('hidden'); canvas.isDrawingMode = false;
+            }
+            bSel.onclick = () => { rstTool(); bSel.classList.add('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10'); };
+            bDraw.onclick = () => {
+                rstTool(); bDraw.classList.add('active', 'border-brandStart', 'text-brandStart', 'bg-brandStart/10');
+                dOpt.classList.remove('hidden'); canvas.isDrawingMode = true;
+                canvas.freeDrawingBrush.color = document.getElementById('draw-color').value;
+                canvas.freeDrawingBrush.width = parseInt(document.getElementById('draw-width').value);
+            };
+            document.getElementById('draw-color').onchange = e => canvas.freeDrawingBrush.color = e.target.value;
+            document.getElementById('draw-width').oninput = e => { document.getElementById('val-brush').innerText = e.target.value+'px'; canvas.freeDrawingBrush.width = parseInt(e.target.value); };
+
+            document.getElementById('btn-text').onclick = () => {
+                rstTool(); bSel.click(); fOpt.classList.remove('hidden');
+                const t = new fabric.IText('Nhập chữ...', { left: logicalW/2, top: logicalH/2, fontFamily: 'Syne', fill: document.getElementById('text-color-picker').value, fontSize: 60, fontWeight: 'bold', originX: 'center', originY: 'center', cornerColor: '#D972FF', borderColor: '#D972FF', cornerSize: 12 });
+                canvas.add(t); canvas.setActiveObject(t);
+            };
+
+            document.querySelectorAll('.font-btn').forEach(btn => {
+                btn.onclick = e => {
+                    const ao = canvas.getActiveObject();
+                    if(ao && ao.type.includes('text')) {
+                        ao.set('fontFamily', e.target.dataset.font); canvas.renderAll();
+                        document.querySelectorAll('.font-btn').forEach(b => b.classList.remove('border-brandStart', 'text-brandStart'));
+                        e.target.classList.add('border-brandStart', 'text-brandStart');
+                    }
+                };
+            });
+            
+            document.getElementById('text-color-picker').oninput = e => { const ao = canvas.getActiveObject(); if(ao && ao.type.includes('text')) { ao.set('fill', e.target.value); canvas.renderAll(); } };
+            document.getElementById('font-size-slider').oninput = e => {
+                document.getElementById('val-font-size').innerText = e.target.value+'px';
+                const ao = canvas.getActiveObject();
+                if(ao && ao.type.includes('text')) { ao.set('fontSize', parseInt(e.target.value)); canvas.renderAll(); }
+            };
+
+            canvas?.on('selection:created', chkFont); canvas?.on('selection:updated', chkFont);
+            canvas?.on('selection:cleared', () => fOpt.classList.add('hidden'));
+            function chkFont(e) {
+                if(e.selected && e.selected[0] && e.selected[0].type.includes('text')) {
+                    fOpt.classList.remove('hidden');
+                    document.getElementById('text-color-picker').value = e.selected[0].fill || '#000000';
+                    if(e.selected[0].fontSize) { document.getElementById('font-size-slider').value = e.selected[0].fontSize; document.getElementById('val-font-size').innerText = e.selected[0].fontSize+'px'; }
+                } else fOpt.classList.add('hidden');
+            }
+
+            document.getElementById('btn-delete-obj').onclick = () => {
+                const ao = canvas.getActiveObjects();
+                if(ao.length) { canvas.discardActiveObject(); ao.forEach(o => { if(!fabricImages.includes(o)) canvas.remove(o); }); }
+            };
+            window.addEventListener('keydown', e => { if((e.key==='Backspace' || e.key==='Delete') && e.target.tagName !== 'INPUT' && !canvas.getActiveObject()?.isEditing) document.getElementById('btn-delete-obj').click(); });
+
+            document.getElementById('btn-clear-canvas').onclick = () => {
+                const toRem = canvas.getObjects().filter(o => !fabricImages.includes(o) && o !== defaultElements.title && o !== defaultElements.date && o !== defaultElements.qr);
+                toRem.forEach(o => canvas.remove(o)); canvas.renderAll();
+            };
+
+            // --- QR & Options ---
+            const qrI = document.getElementById('qr-link-input'), qrT = document.getElementById('toggle-qr');
+            function updQR() {
+                if(!canvas) return;
+                if(qrT.checked) {
+                    const qr = new QRious({ value: qrI.value.trim() || 'https://instagram.com', size: 250, level: 'H' }).toDataURL();
+                    if(defaultElements.qr) { defaultElements.qr.setSrc(qr, () => { defaultElements.qr.set('visible', true); canvas.renderAll(); }); }
+                    else {
+                        fabric.Image.fromURL(qr, img => {
+                            img.set({ left: logicalW-120, top: logicalH-120, originX: 'center', originY: 'center', selectable: true, cornerColor: '#D972FF', borderColor: '#D972FF', cornerSize: 12 });
+                            img.scaleToWidth(120); defaultElements.qr = img; canvas.add(img); canvas.renderAll();
+                        });
+                    }
+                } else { if(defaultElements.qr) { defaultElements.qr.set('visible', false); canvas.renderAll(); } }
+            }
+            qrT.onchange = updQR; qrI.oninput = () => { if(qrT.checked) updQR(); };
+            
+            document.getElementById('toggle-date').onchange = e => { if(defaultElements.date) { defaultElements.date.set('visible', e.target.checked); canvas.renderAll(); } };
+            document.getElementById('toggle-logo').onchange = e => { if(defaultElements.title) { defaultElements.title.set('visible', e.target.checked); canvas.renderAll(); } };
+
+            // --- Export ---
+            document.getElementById('btn-export-png').onclick = () => {
+                canvas.discardActiveObject(); canvas.renderAll();
+                const a = document.createElement('a'); a.download = `MiniStu-Hct-${Date.now()}.png`; a.href = canvas.toDataURL({format: 'png', multiplier: 1.5}); a.click();
+            };
+        });
+    </script>
+</body>
+</html>
